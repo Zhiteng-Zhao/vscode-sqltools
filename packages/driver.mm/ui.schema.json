@@ -1,0 +1,3 @@
+{
+  "ui:order": ["connectionMethod", "scheme", "server", "port", "path", "connectionTimeout"]
+}

@@ -1,6 +1,7 @@
 {
   "folders": [
     { "path": "./packages/base-driver" },
+	{ "path": "./packages/driver.mm" },
     { "path": "./packages/driver.mssql" },
     { "path": "./packages/driver.mysql" },
     { "path": "./packages/driver.pg" },
