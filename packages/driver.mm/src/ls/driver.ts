@@ -6,7 +6,9 @@ import fs from 'fs';
 import zipObject from 'lodash/zipObject';
 import { parse as queryParse } from '@sqltools/util/query';
 import generateId from '@sqltools/util/internal-id';
-
+// import http from 'http';
+import keywordsCompletion from './keywords';
+import fetch from 'node-fetch';
 const rawValue = (v: string) => v;
 
 types.setTypeParser((types as any).builtins.TIMESTAMP || 1114, rawValue);
@@ -159,10 +161,22 @@ export default class PostgreSQL extends AbstractDriver<Pool, PoolConfig> impleme
 
   public async testConnection() {
     console.log('right here!');
-    const pool = await this.open()
-    const cli = await pool.connect();
-    await cli.query('SELECT 1');
-    cli.release();
+    // var options = {
+    //   method: "GET",
+    // };
+    // http.get("http://127.0.0.1:8080/test/test", options, (res: http.IncomingMessage) => {
+    //   res.on("data", function (d) {
+    //     console.log("result:" + d);
+    //   });
+    // })
+    const response = await fetch('http://127.0.0.1:8080/test/test');
+    const json = await response.text();
+    console.log(json);
+    console.log("function end.");
+    // const pool = await this.open()
+    // const cli = await pool.connect();
+    // await cli.query('SELECT 1');
+    // cli.release();
   }
 
   public async getChildrenForItem({ item, parent }: Arg0<IConnectionDriver['getChildrenForItem']>) {
@@ -215,7 +229,8 @@ export default class PostgreSQL extends AbstractDriver<Pool, PoolConfig> impleme
     }
   }
 
-  private completionsCache: { [w: string]: NSDatabase.IStaticCompletion } = null;
+  // private completionsCache: { [w: string]: NSDatabase.IStaticCompletion } = null;
+  /*
   public getStaticCompletions = async () => {
     if (this.completionsCache) return this.completionsCache;
     this.completionsCache = {};
@@ -223,6 +238,7 @@ export default class PostgreSQL extends AbstractDriver<Pool, PoolConfig> impleme
 
     items.forEach((item: any) => {
       this.completionsCache[item.label] = {
+
         label: item.label,
         detail: item.label,
         filterText: item.label,
@@ -235,5 +251,9 @@ export default class PostgreSQL extends AbstractDriver<Pool, PoolConfig> impleme
     });
 
     return this.completionsCache;
+  }
+  */
+  public getStaticCompletions = async () => {
+    return keywordsCompletion;
   }
 }
