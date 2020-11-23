@@ -82,6 +82,31 @@ export default class PostgreSQL extends AbstractDriver<Pool, PoolConfig> impleme
     pool.end();
   }
 
+  public query: (typeof AbstractDriver)['prototype']['query'] = async (query, opt = {}) => {
+    const { requestId } = opt;
+    const queries = queryParse(query.toString()).filter(Boolean);
+    let resultsAgg: NSDatabase.IResult[] = [];
+    for (let q of queries) {
+      const results: any[] = [{'attr1': '1', 'attr2': '3'},{'attr1': '2', 'attr2': '4'}];
+      const messages = [];
+      if (results.length === 0 && q.toLowerCase() !== 'select') {
+        messages.push(this.prepareMessage(`${results.length} rows were affected.`));
+      }
+      resultsAgg.push(<NSDatabase.IResult>{
+        requestId,
+        resultId: generateId(),
+        connId: this.getId(),
+        // cols: results && results.length ? Object.keys(results[0]) : [],
+        cols: ['attr1', 'attr2'],
+        messages,
+        query: q,
+        results,
+      });
+    }
+    return resultsAgg;
+  }
+
+  /*
   public query: (typeof AbstractDriver)['prototype']['query'] = (query, opt = {}) => {
     const messages = [];
     let cli : PoolClient;
@@ -137,6 +162,7 @@ export default class PostgreSQL extends AbstractDriver<Pool, PoolConfig> impleme
         }];
       });
   }
+  */
 
   private getColumnNames(fields: FieldDef[]): string[] {
     return fields.reduce((names, { name }) => {
@@ -150,13 +176,32 @@ export default class PostgreSQL extends AbstractDriver<Pool, PoolConfig> impleme
   }
 
   private async getColumns(parent: NSDatabase.ITable): Promise<NSDatabase.IColumn[]> {
-    const results = await this.queryResults(this.queries.fetchColumns(parent));
-    return results.map(col => ({
-      ...col,
-      iconName: col.isPk ? 'pk' : (col.isFk ? 'fk' : null),
+
+    return <NSDatabase.IColumn[]>[{
+      database: 'clearAccountNo',
+      label: 'clearAccountNo',
+      dataType: 'string',
+      type: ContextValue.COLUMN,
+      iconName: 'column',
+      table: parent,
       childType: ContextValue.NO_CHILD,
-      table: parent
-    }));
+    },{
+      database: 'ClearMemberId',
+      label: 'ClearMemberId',
+      dataType: 'string',
+      type: ContextValue.COLUMN,
+      iconName: 'column',
+      table: parent,
+      childType: ContextValue.NO_CHILD,
+    }];
+
+    // const results = await this.queryResults(this.queries.fetchColumns(parent));
+    // return results.map(col => ({
+    //   ...col,
+    //   iconName: col.isPk ? 'pk' : (col.isFk ? 'fk' : null),
+    //   childType: ContextValue.NO_CHILD,
+    //   table: parent
+    // }));
   }
 
   public async testConnection() {
@@ -179,11 +224,29 @@ export default class PostgreSQL extends AbstractDriver<Pool, PoolConfig> impleme
     // cli.release();
   }
 
+  public getInsertQuery(params: { item: NSDatabase.ITable; columns: Array<NSDatabase.IColumn> }) {
+    const { item, columns } = params;
+    let insertQuery = `TableBuilder.createTable(dataManager.get(DATA_CACHE, "${item.label}", Table.class)).where(`;
+    columns.forEach((col, index) => {
+      if (columns.length == index + 1) {
+        insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.dataType}}) `);
+      } else {
+        insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.dataType}}), `);
+      }
+    });
+    insertQuery = insertQuery.concat(`).list();`);
+    return insertQuery;
+  }
+
   public async getChildrenForItem({ item, parent }: Arg0<IConnectionDriver['getChildrenForItem']>) {
+    console.log("#### " + item.type);
     switch (item.type) {
       case ContextValue.CONNECTION:
       case ContextValue.CONNECTED_CONNECTION:
-        return this.queryResults(this.queries.fetchDatabases());
+        return <MConnectionExplorer.IChildItem[]>[
+          { label: 'Caches', type: ContextValue.RESOURCE_GROUP, iconId: 'folder', childType: ContextValue.SCHEMA },
+        ];
+        // return this.queryResults(this.queries.fetchDatabases());
       case ContextValue.TABLE:
       case ContextValue.VIEW:
       case ContextValue.MATERIALIZED_VIEW:
@@ -196,10 +259,9 @@ export default class PostgreSQL extends AbstractDriver<Pool, PoolConfig> impleme
         return this.getChildrenForGroup({ item, parent });
       case ContextValue.SCHEMA:
         return <MConnectionExplorer.IChildItem[]>[
-          { label: 'Tables', type: ContextValue.RESOURCE_GROUP, iconId: 'folder', childType: ContextValue.TABLE },
-          { label: 'Views', type: ContextValue.RESOURCE_GROUP, iconId: 'folder', childType: ContextValue.VIEW },
-          { label: 'Materialized Views', type: ContextValue.RESOURCE_GROUP, iconId: 'folder', childType: ContextValue.MATERIALIZED_VIEW },
-          { label: 'Functions', type: ContextValue.RESOURCE_GROUP, iconId: 'folder', childType: ContextValue.FUNCTION },
+          { label: 'Keys', type: ContextValue.RESOURCE_GROUP, iconId: 'folder', childType: ContextValue.TABLE }
+          // { label: 'Tables', type: ContextValue.RESOURCE_GROUP, iconId: 'folder', childType: ContextValue.TABLE },
+          // { label: 'Views', type: ContextValue.RESOURCE_GROUP, iconId: 'folder', childType: ContextValue.VIEW }
         ];
     }
     return [];
@@ -207,9 +269,53 @@ export default class PostgreSQL extends AbstractDriver<Pool, PoolConfig> impleme
   private async getChildrenForGroup({ parent, item }: Arg0<IConnectionDriver['getChildrenForItem']>) {
     switch (item.childType) {
       case ContextValue.SCHEMA:
-        return this.queryResults(this.queries.fetchSchemas(parent as NSDatabase.IDatabase));
+        console.log("get schema");
+        return <NSDatabase.ISchema[]>[{
+          database: 'mt.default.cache',
+          label: 'mt.default.cache',
+          type: ContextValue.SCHEMA,
+          iconName: 'database',
+        },{
+          database: 'mt.rt.cache',
+          label: 'mt.rt.cache',
+          type: ContextValue.SCHEMA,
+          iconName: 'database',
+        }];
+        // return this.queryResults(this.queries.fetchSchemas(parent as NSDatabase.IDatabase));
       case ContextValue.TABLE:
-        return this.queryResults(this.queries.fetchTables(parent as NSDatabase.ISchema));
+        console.log("get table" + parent);
+        if (parent.database == 'mt.default.cache') {
+          return <NSDatabase.ITable[]>[{
+            database: 'ClearAccount',
+            label: 'ClearAccount',
+            type: ContextValue.TABLE,
+            iconName: 'table',
+            childType: ContextValue.COLUMN
+          },{
+            database: 'ClearMember',
+            label: 'ClearMember',
+            type: ContextValue.TABLE,
+            iconName: 'table',
+            childType: ContextValue.COLUMN
+          }];
+        } else {
+          return <NSDatabase.ITable[]>[{
+            database: 'OptLogoutPara',
+            label: 'OptLogoutPara',
+            type: ContextValue.TABLE,
+            iconName: 'table',
+            childType: ContextValue.NO_CHILD
+          },{
+            database: 'MemberOpTime',
+            label: 'MemberOpTime',
+            type: ContextValue.TABLE,
+            iconName: 'table',
+            childType: ContextValue.NO_CHILD
+          }];
+        }
+        
+        
+        // return this.queryResults(this.queries.fetchTables(parent as NSDatabase.ISchema));
       case ContextValue.VIEW:
         return this.queryResults(this.queries.fetchViews(parent as NSDatabase.ISchema));
       case ContextValue.MATERIALIZED_VIEW:
@@ -221,6 +327,7 @@ export default class PostgreSQL extends AbstractDriver<Pool, PoolConfig> impleme
   }
 
   public searchItems(itemType: ContextValue, search: string, extraParams: any = {}): Promise<NSDatabase.SearchableItem[]> {
+    console.log(itemType);
     switch (itemType) {
       case ContextValue.TABLE:
         return this.queryResults(this.queries.searchTables({ search }));
