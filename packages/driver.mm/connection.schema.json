@@ -10,11 +10,6 @@
         "Server and Port"
       ],
       "default": "Server and Port"
-    },
-    "connectionTimeout": {
-      "title": "Connection Timeout",
-      "type": "integer",
-      "minimum": 0
     }
   },
   "dependencies": {

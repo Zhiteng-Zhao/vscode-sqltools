@@ -1,6 +1,6 @@
 import { NSDatabase } from '@sqltools/types';
 
-export const pgCheckEscape = (w: string | { label: string }) =>
+export const checkEscape = (w: string | { label: string }) =>
   /[^a-z0-9_]/.test((<any>w).label || w)
     ? `"${(<any>w).label || w}"`
     : (<any>w).label || w;
@@ -9,9 +9,9 @@ export const pgCheckEscape = (w: string | { label: string }) =>
 function escapeTableName(table: Partial<NSDatabase.ITable> | string) {
   let items: string[] = [];
   let tableObj = typeof table === 'string' ? <NSDatabase.ITable>{ label: table } : table;
-  tableObj.database && items.push(pgCheckEscape(tableObj.database));
-  tableObj.schema && items.push(pgCheckEscape(tableObj.schema));
-  items.push(pgCheckEscape(tableObj.label));
+  tableObj.database && items.push(checkEscape(tableObj.database));
+  tableObj.schema && items.push(checkEscape(tableObj.schema));
+  items.push(checkEscape(tableObj.label));
   return items.join('.');
 }
 
