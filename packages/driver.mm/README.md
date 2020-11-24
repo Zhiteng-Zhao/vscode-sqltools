@@ -5,3 +5,5 @@ This package is part of [vscode-sqltools](https://vscode-sqltools.mteixeira.dev/
 ## Changelog
 
 ### 0.0.1
+
+- First working version
