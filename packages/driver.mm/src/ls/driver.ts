@@ -65,7 +65,7 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
 
   public async testConnection() {
     await this.open();
-    await fetch(serverConfig.url + 'debug/checkservice');
+    await fetch(serverConfig.url + '/debug/checkservice');
   }
 
   public getInsertQuery(params: { item: NSDatabase.ITable; columns: Array<NSDatabase.IColumn> }) {
