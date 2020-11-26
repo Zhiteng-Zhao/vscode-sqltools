@@ -110,7 +110,7 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
 
   public getInsertQuery(params: { item: NSDatabase.ITable; columns: Array<NSDatabase.IColumn> }) {
     const { item, columns } = params;
-    let insertQuery = `TableBuilder.createTable(dataManager.get(DATA_CACHE, "${item.label}", Table.class)).where(`;
+    let insertQuery = `TableBuilder.createTable(dataManager.get("${item.schema}", "${item.label}", Table.class)).where(`;
     columns.forEach((col, index) => {
       if (columns.length == index + 1) {
         insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.type}}) `);
