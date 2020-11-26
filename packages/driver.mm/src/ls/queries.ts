@@ -1,17 +1,19 @@
 import queryFactory from '@sqltools/base-driver/dist/lib/factory';
 import { IBaseQueries, ContextValue } from '@sqltools/types';
+import escapeTableName from '../escape-table';
 
 const describeTable: IBaseQueries['describeTable'] = queryFactory`
-describeTable`;
+describeTable ${p => p.database}.${p => p.schema}.${p => p.label}
+`;
 const fetchColumns: IBaseQueries['fetchColumns'] = queryFactory`
 fetchColumns
 `;
 
 const fetchRecords: IBaseQueries['fetchRecords'] = queryFactory`
-fetchRecords
+TableBuilder.createTable(dataManager.get(${p => escapeTableName.escapeCacheName(p.table)}, ${p => escapeTableName.escapeKeyName(p.table)}, Table.class)).list();
 `;
 const countRecords: IBaseQueries['countRecords'] = queryFactory`
-countRecords
+TableBuilder.createTable(dataManager.get(${p => escapeTableName.escapeCacheName(p.table)}, ${p => escapeTableName.escapeKeyName(p.table)}, Table.class)).count();
 `;
 
 const fetchFunctions: IBaseQueries['fetchFunctions'] = queryFactory`

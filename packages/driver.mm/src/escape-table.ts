@@ -15,4 +15,18 @@ function escapeTableName(table: Partial<NSDatabase.ITable> | string) {
   return items.join('.');
 }
 
-export default escapeTableName;
+function escapeCacheName(table: Partial<NSDatabase.ITable> | string) {
+  let tableObj = typeof table === 'string' ? <NSDatabase.ITable>{ label: table } : table;
+  return checkEscape(tableObj.schema);
+}
+
+function escapeKeyName(table: Partial<NSDatabase.ITable> | string) {
+  let tableObj = typeof table === 'string' ? <NSDatabase.ITable>{ label: table } : table;
+  return checkEscape(tableObj.label);
+}
+
+export default {
+  escapeTableName,
+  escapeCacheName,
+  escapeKeyName,
+};

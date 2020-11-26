@@ -1,5 +1,5 @@
 import Queries from './queries';
-import { IConnectionDriver, NSDatabase, Arg0, ContextValue, MConnectionExplorer } from '@sqltools/types';
+import { IConnectionDriver, NSDatabase, Arg0, ContextValue, MConnectionExplorer, IQueryOptions } from '@sqltools/types';
 import AbstractDriver from '@sqltools/base-driver';
 import { parse as queryParse } from '@sqltools/util/query';
 import generateId from '@sqltools/util/internal-id';
@@ -15,6 +15,7 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
       return serverConfig;
     }
     serverConfig = {
+      database: this.credentials.name,
       connectionTimeoutMillis: Number(`${this.credentials.connectionTimeout || 0}`) * 1000,
       url: this.credentials.scheme + '://' + this.credentials.server + ':' + this.credentials.port + '/' + this.credentials.path
     };
@@ -31,7 +32,7 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
     for (let q of queries) {
       const results: any[] = await this.httpGet('/debug/execute?code=' + q);
       const messages = [];
-      if (results.length === 0 && q.toLowerCase() !== 'select') {
+      if (results.length === 0) {
         messages.push(this.prepareMessage(`${results.length} rows were affected.`));
       }
       resultsAgg.push(<NSDatabase.IResult>{
@@ -48,12 +49,12 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
   }
 
   private async getColumns(parent: NSDatabase.ITable): Promise<NSDatabase.IColumn[]> {
-    const columnsCaches = await this.httpGet('/debug/columns?parent=' + parent.label);
+    const columnsCaches = await this.httpGet('/debug/getMember?cacheName=' + parent.schema + '&key=' + parent.label);
     let columnResults: NSDatabase.IColumn[] = [];
     for (let data of columnsCaches) {
       columnResults.push(<NSDatabase.IColumn>{
-        label: data.label,
-        dataType: data.dataType,
+        label: data.field,
+        dataType: data.type,
         type: ContextValue.COLUMN,
         iconName: 'column',
         table: parent,
@@ -66,6 +67,45 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
   public async testConnection() {
     await this.open();
     await fetch(serverConfig.url + '/debug/checkservice');
+  }
+
+  public async describeTable(metadata: NSDatabase.ITable, opt: IQueryOptions) {
+    const { requestId } = opt;
+    let resultsAgg: NSDatabase.IResult[] = [];
+    const results: any[] = await await this.httpGet('/debug/getMember?cacheName=' + metadata.schema + '&key=' + metadata.label);
+    const messages = [];
+    if (results.length === 0) {
+      messages.push(this.prepareMessage(`${results.length} definition was found.`));
+    }
+    resultsAgg.push(<NSDatabase.IResult>{
+      requestId,
+      resultId: generateId(),
+      connId: this.getId(),
+      cols: results && results.length ? Object.keys(results[0]) : [],
+      messages,
+      query: this.queries.describeTable.raw,
+      results,
+    });
+    return resultsAgg;
+  }
+
+  public async showRecords(table: NSDatabase.ITable, opt: IQueryOptions & { limit: number, page?: number }) {
+    const { limit, page = 0 } = opt;
+    const params = { ...opt, limit, table, offset: page * limit };
+    if (typeof this.queries.fetchRecords === 'function' && typeof this.queries.countRecords === 'function') {
+      console.log(params);
+      const [ records, totalResult ] = await (Promise.all([
+        this.singleQuery(this.queries.fetchRecords(params), opt),
+        this.singleQuery(this.queries.countRecords(params), opt),
+      ]));
+      records.baseQuery = this.queries.fetchRecords.raw;
+      records.pageSize = limit;
+      records.page = page;
+      records.total = Number((totalResult.results[0] as any).total);
+      records.queryType = 'showRecords';
+      records.queryParams = table;
+      return [records];
+    }
   }
 
   public getInsertQuery(params: { item: NSDatabase.ITable; columns: Array<NSDatabase.IColumn> }) {
@@ -109,24 +149,25 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
   private async getChildrenForGroup({ parent, item }: Arg0<IConnectionDriver['getChildrenForItem']>) {
     switch (item.childType) {
       case ContextValue.SCHEMA:
-        const jsonCaches = await this.httpGet('/debug/caches');
+        const jsonCaches = await this.httpGet('/debug/getCaches');
         let cacheResults: NSDatabase.ISchema[] = [];
         for (let data of jsonCaches) {
           cacheResults.push(<NSDatabase.ISchema>{
-            database: data.database,
-            label: data.label,
+            database: serverConfig.database,
+            label: data.cacheName,
             type: ContextValue.SCHEMA,
             iconName: 'database',
           });
         }
         return cacheResults;
       case ContextValue.TABLE:
-        const jsonTables = await this.httpGet('/debug/tables?parent=' + parent.label);
+        const jsonTables = await this.httpGet('/debug/getCacheKeys?cacheName=' + parent.label);
         let tableResults: NSDatabase.ITable[] = [];
         for (let data of jsonTables) {
           tableResults.push(<NSDatabase.ITable>{
-            database: data.database,
-            label: data.label,
+            database: parent.database,
+            label: data.key,
+            schema: parent.label,
             type: ContextValue.TABLE,
             iconName: 'table',
             childType: ContextValue.COLUMN
@@ -174,5 +215,6 @@ export interface MTClient {}
 
 export interface ConnectionOptions {
   url?: string;
+  database?: string;
   connectionTimeoutMillis?: number;
 }
