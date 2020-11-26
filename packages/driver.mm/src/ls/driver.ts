@@ -113,9 +113,9 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
     let insertQuery = `TableBuilder.createTable(dataManager.get(DATA_CACHE, "${item.label}", Table.class)).where(`;
     columns.forEach((col, index) => {
       if (columns.length == index + 1) {
-        insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.dataType}}) `);
+        insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.type}}) `);
       } else {
-        insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.dataType}}), `);
+        insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.type}}), `);
       }
     });
     insertQuery = insertQuery.concat(`).list();`);
