@@ -11,9 +11,9 @@ let serverConfig: ConnectionOptions;
 export default class MM extends AbstractDriver<MTClient, ServerConfig> implements IConnectionDriver {
   queries = Queries;
   public async open() {
-    if (serverConfig) {
-      return serverConfig;
-    }
+    // if (serverConfig) {
+    //   return serverConfig;
+    // }
     serverConfig = {
       database: this.credentials.name,
       connectionTimeoutMillis: Number(`${this.credentials.connectionTimeout || 0}`) * 1000,
