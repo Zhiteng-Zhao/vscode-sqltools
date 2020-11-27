@@ -2,7 +2,7 @@
   "name": "sqltools-driver-mm",
   "displayName": "SQLTools Memory Clear MM Driver",
   "description": "SQLTools Memory Clear MM Driver",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.42.0"
   },
