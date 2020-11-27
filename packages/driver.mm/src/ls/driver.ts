@@ -110,15 +110,19 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
 
   public getInsertQuery(params: { item: NSDatabase.ITable; columns: Array<NSDatabase.IColumn> }) {
     const { item, columns } = params;
-    let insertQuery = `TableBuilder.createTable(dataManager.get("${item.schema}", "${item.label}", Table.class)).where(`;
-    columns.forEach((col, index) => {
-      if (columns.length == index + 1) {
-        insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.dataType}}) `);
-      } else {
-        insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.dataType}}), `);
-      }
-    });
-    insertQuery = insertQuery.concat(`).list();`);
+    let insertQuery = `TableBuilder.createTable(dataManager.get("${item.schema}", "${item.label}", Table.class))`;
+    if (columns.length != 0) {
+      insertQuery = insertQuery.concat(`.where(`);
+      columns.forEach((col, index) => {
+        if (columns.length == index + 1) {
+          insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.dataType}}) `);
+        } else {
+          insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.dataType}}), `);
+        }
+      });
+      insertQuery = insertQuery.concat(`)`);
+    }
+    insertQuery = insertQuery.concat(`.list();`);
     return insertQuery;
   }
 
