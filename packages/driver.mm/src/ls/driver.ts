@@ -55,6 +55,7 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
       columnResults.push(<NSDatabase.IColumn>{
         label: data.field,
         dataType: data.type,
+        detail: data.type,
         type: ContextValue.COLUMN,
         iconName: 'column',
         table: parent,
@@ -92,18 +93,22 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
   public async showRecords(table: NSDatabase.ITable, opt: IQueryOptions & { limit: number, page?: number }) {
     const { limit, page = 0 } = opt;
     const params = { ...opt, limit, table, offset: page * limit };
-    if (typeof this.queries.fetchRecords === 'function' && typeof this.queries.countRecords === 'function') {
-      const [ records, totalResult ] = await (Promise.all([
-        this.singleQuery(this.queries.fetchRecords(params), opt),
-        this.singleQuery(this.queries.countRecords(params), opt),
-      ]));
-      records.baseQuery = this.queries.fetchRecords.raw;
-      records.pageSize = limit;
-      records.page = page != undefined ? page : 1;
-      records.total = totalResult.results[0] != undefined ? Number((totalResult.results[0] as any).total) : records.results.length;
-      records.queryType = 'showRecords';
-      records.queryParams = table;
-      return [records];
+    try {
+      if (typeof this.queries.fetchRecords === 'function' && typeof this.queries.countRecords === 'function') {
+        const [ records, totalResult ] = await (Promise.all([
+          this.singleQuery(this.queries.fetchRecords(params), opt),
+          this.singleQuery(this.queries.countRecords(params), opt),
+        ]));
+        records.baseQuery = this.queries.fetchRecords.raw;
+        records.pageSize = limit;
+        records.page = page != undefined ? page : 1;
+        records.total = totalResult.results[0] != undefined ? Number((totalResult.results[0] as any).total) : records.results.length;
+        records.queryType = 'showRecords';
+        records.queryParams = table;
+        return [records];
+      }
+    } catch (error) {
+      return Promise.reject(error);
     }
   }
 
@@ -196,14 +201,13 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
 
   private async httpGet(path: string) {
     const response = await fetch(serverConfig.url + path);
-    const json = await response.json();
-    const messages = [];
-    if (json.length === 0) {
-      messages.push(this.prepareMessage(`no rows.`));
+    if (response.ok) {
+      const json = await response.json();
+      return json;
+    } else {
+      return Promise.reject(new Error(response.status + ": " + response.statusText));
     }
-    return json;
   }
-
 }
 
 export interface ServerConfig {
