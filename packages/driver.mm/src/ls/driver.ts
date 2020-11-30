@@ -203,9 +203,12 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
     const response = await fetch(serverConfig.url + path);
     if (response.ok) {
       const json = await response.json();
-      return json;
+      if (json.code != '200') {
+        return Promise.reject(new Error("Server response: " + JSON.stringify(json)));
+      }
+      return json.data;
     } else {
-      return Promise.reject(new Error(response.status + ": " + response.statusText));
+      return Promise.reject(new Error("Server response: " + response.status + " " + response.statusText));
     }
   }
 }
