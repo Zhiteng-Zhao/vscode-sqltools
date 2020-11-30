@@ -1,7 +1,7 @@
 {
   "name": "sqltools-driver-mm",
   "displayName": "SQLTools Memory Clear MM Driver",
-  "description": "SQLTools Memory Clear MM Driver",
+  "description": "A Visual Studio Code extension which extends SQLTools extension, with a driver to work with Memory Clear MM model",
   "version": "0.1.0",
   "engines": {
     "vscode": "^1.42.0"
