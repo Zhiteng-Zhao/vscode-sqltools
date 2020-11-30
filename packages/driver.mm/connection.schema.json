@@ -29,7 +29,7 @@
               "default": "http"
             },
             "server": {
-              "title": "Server Address",
+              "title": "Server address",
               "type": "string",
               "minLength": 1,
               "default": "localhost"
