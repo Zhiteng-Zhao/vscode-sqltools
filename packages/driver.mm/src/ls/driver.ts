@@ -93,15 +93,14 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
     const { limit, page = 0 } = opt;
     const params = { ...opt, limit, table, offset: page * limit };
     if (typeof this.queries.fetchRecords === 'function' && typeof this.queries.countRecords === 'function') {
-      console.log(params);
       const [ records, totalResult ] = await (Promise.all([
         this.singleQuery(this.queries.fetchRecords(params), opt),
         this.singleQuery(this.queries.countRecords(params), opt),
       ]));
       records.baseQuery = this.queries.fetchRecords.raw;
       records.pageSize = limit;
-      records.page = page;
-      records.total = Number((totalResult.results[0] as any).total);
+      records.page = page != undefined ? page : 1;
+      records.total = totalResult.results[0] != undefined ? Number((totalResult.results[0] as any).total) : records.results.length;
       records.queryType = 'showRecords';
       records.queryParams = table;
       return [records];
