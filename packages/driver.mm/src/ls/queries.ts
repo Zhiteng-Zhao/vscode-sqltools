@@ -10,10 +10,10 @@ fetchColumns
 `;
 
 const fetchRecords: IBaseQueries['fetchRecords'] = queryFactory`
-TableBuilder.createTable(dataManager.get(${p => escapeTableName.escapeCacheName(p.table)}, ${p => escapeTableName.escapeKeyName(p.table)}, Table.class)).list();
+TableBuilder.createTable(dataManager.get(${p => escapeTableName.escapeCacheName(p.table)}, ${p => escapeTableName.escapeKeyName(p.table)}, Table.class)).list()
 `;
 const countRecords: IBaseQueries['countRecords'] = queryFactory`
-TableBuilder.createTable(dataManager.get(${p => escapeTableName.escapeCacheName(p.table)}, ${p => escapeTableName.escapeKeyName(p.table)}, Table.class)).count();
+TableBuilder.createTable(dataManager.get(${p => escapeTableName.escapeCacheName(p.table)}, ${p => escapeTableName.escapeKeyName(p.table)}, Table.class)).count()
 `;
 
 const fetchFunctions: IBaseQueries['fetchFunctions'] = queryFactory`

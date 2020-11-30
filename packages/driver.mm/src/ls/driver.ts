@@ -126,7 +126,7 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
       });
       insertQuery = insertQuery.concat(`)`);
     }
-    insertQuery = insertQuery.concat(`.list();`);
+    insertQuery = insertQuery.concat(`.list()`);
     return insertQuery;
   }
 
