@@ -4,6 +4,8 @@ const keywordsArr = [
   'TableBuilder',
   'createTable()',
   'dataManager.get()',
+  'dataManager.getString()',
+  'dataManager.getList()',
   'DATA_CACHE',
   'Table.class',
   'where()',

@@ -25,8 +25,14 @@ function escapeKeyName(table: Partial<NSDatabase.ITable> | string) {
   return checkEscape(tableObj.label);
 }
 
+function escapeDetailAttr(table: Partial<NSDatabase.ITable> | string) {
+  let tableObj = typeof table === 'string' ? <NSDatabase.ITable>{ label: table } : table;
+  return tableObj.detail;
+}
+
 export default {
   escapeTableName,
   escapeCacheName,
   escapeKeyName,
+  escapeDetailAttr,
 };

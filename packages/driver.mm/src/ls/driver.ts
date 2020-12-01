@@ -1,4 +1,5 @@
 import Queries from './queries';
+import NotifyResponseError from '@sqltools/base-driver/dist/lib/exception/response-error';
 import { IConnectionDriver, NSDatabase, Arg0, ContextValue, MConnectionExplorer, IQueryOptions } from '@sqltools/types';
 import AbstractDriver from '@sqltools/base-driver';
 import { parse as queryParse } from '@sqltools/util/query';
@@ -95,14 +96,24 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
     const params = { ...opt, limit, table, offset: page * limit };
     try {
       if (typeof this.queries.fetchRecords === 'function' && typeof this.queries.countRecords === 'function') {
-        const [ records, totalResult ] = await (Promise.all([
-          this.singleQuery(this.queries.fetchRecords(params), opt),
-          this.singleQuery(this.queries.countRecords(params), opt),
-        ]));
-        records.baseQuery = this.queries.fetchRecords.raw;
+        let records;
+        switch (table.detail) {
+          case 'String':
+            [ records ] = await (Promise.all([
+              this.singleQuery(this.queries.fetchString(params), opt),
+            ]));
+            records.baseQuery = this.queries.fetchString.raw;
+            break;
+          default:
+            [ records ] = await (Promise.all([
+              this.singleQuery(this.queries.fetchRecords(params), opt),
+            ]));
+            records.baseQuery = this.queries.fetchRecords.raw;
+            break;
+        }
         records.pageSize = limit;
         records.page = page != undefined ? page : 1;
-        records.total = totalResult.results[0] != undefined ? Number((totalResult.results[0] as any).total) : records.results.length;
+        records.total = Number(records.results.length);
         records.queryType = 'showRecords';
         records.queryParams = table;
         return [records];
@@ -114,19 +125,27 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
 
   public getInsertQuery(params: { item: NSDatabase.ITable; columns: Array<NSDatabase.IColumn> }) {
     const { item, columns } = params;
-    let insertQuery = `TableBuilder.createTable(dataManager.get("${item.schema}", "${item.label}", Table.class))`;
-    if (columns.length != 0) {
-      insertQuery = insertQuery.concat(`.where(`);
-      columns.forEach((col, index) => {
-        if (columns.length == index + 1) {
-          insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.dataType}}) `);
-        } else {
-          insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.dataType}}), `);
+    let insertQuery;
+    switch (item.detail) {
+      case 'String':
+        insertQuery = `dataManager.getString("${item.schema}", "${item.label}");`;
+        break;
+      default:
+        insertQuery = `TableBuilder.createTable(dataManager.get("${item.schema}", "${item.label}", ${item.detail}.class))`;
+        if (columns.length != 0) {
+          insertQuery = insertQuery.concat('.where(');
+          columns.forEach((col, index) => {
+            if (columns.length == index + 1) {
+              insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.dataType}}) `);
+            } else {
+              insertQuery = insertQuery.concat(`eq("\${${index + 1}:${col.label}}", \${${index + 1}:${col.label}:${col.dataType}}), `);
+            }
+          })
+          insertQuery = insertQuery.concat(')');
         }
-      });
-      insertQuery = insertQuery.concat(`)`);
+        insertQuery = insertQuery.concat('.list();');
+        break;
     }
-    insertQuery = insertQuery.concat(`.list()`);
     return insertQuery;
   }
 
@@ -172,12 +191,22 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
         const jsonTables = await this.httpGet('/debug/getCacheKeys?cacheName=' + parent.label);
         let tableResults: NSDatabase.ITable[] = [];
         for (let data of jsonTables) {
+          let iconName;
+          switch (data.type) {
+            case 'String':
+              iconName = 'view';
+              break;
+            default:
+              iconName = 'table';
+              break;
+          }
           tableResults.push(<NSDatabase.ITable>{
             database: parent.database,
             label: data.key,
+            detail: data.type != undefined ? data.type : 'Table',
             schema: parent.label,
             type: ContextValue.TABLE,
-            iconName: 'table',
+            iconName: iconName, // table, view, function
             childType: ContextValue.COLUMN
           });
         }
@@ -204,11 +233,11 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
     if (response.ok) {
       const json = await response.json();
       if (json.code != '200') {
-        return Promise.reject(new Error("Server response: " + JSON.stringify(json)));
+        return Promise.reject(new NotifyResponseError(2001, json.message, json));
       }
       return json.data;
     } else {
-      return Promise.reject(new Error("Server response: " + response.status + " " + response.statusText));
+      return Promise.reject(new NotifyResponseError(2000, response.statusText, {code: response.status, message: response.statusText}));
     }
   }
 }
