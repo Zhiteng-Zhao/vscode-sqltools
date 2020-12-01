@@ -192,12 +192,15 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
         let tableResults: NSDatabase.ITable[] = [];
         for (let data of jsonTables) {
           let iconName;
+          let childType;
           switch (data.type) {
             case 'String':
               iconName = 'view';
+              childType = ContextValue.NO_CHILD;
               break;
             default:
               iconName = 'table';
+              childType = ContextValue.COLUMN;
               break;
           }
           tableResults.push(<NSDatabase.ITable>{
@@ -207,7 +210,7 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
             schema: parent.label,
             type: ContextValue.TABLE,
             iconName: iconName, // table, view, function
-            childType: ContextValue.COLUMN
+            childType: childType
           });
         }
         return tableResults;
