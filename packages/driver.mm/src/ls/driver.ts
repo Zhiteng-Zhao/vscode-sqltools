@@ -18,6 +18,7 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
     serverConfig = {
       database: this.credentials.name,
       connectionTimeoutMillis: Number(`${this.credentials.connectionTimeout || 0}`) * 1000,
+      previewLimit: this.credentials.previewLimit,
       url: this.credentials.scheme + '://' + this.credentials.server + ':' + this.credentials.port + '/' + this.credentials.path
     };
     return serverConfig;
@@ -28,10 +29,12 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
 
   public query: (typeof AbstractDriver)['prototype']['query'] = async (query, opt = {}) => {
     const { requestId } = opt;
+    opt.page = opt.page != undefined ? opt.page : 0;
+    opt.limit = serverConfig.previewLimit;
     const queries = queryParse(query.toString()).filter(Boolean);
     let resultsAgg: NSDatabase.IResult[] = [];
     for (let q of queries) {
-      const results: any[] = await this.httpGet('/debug/execute?code=' + q);
+      const results: any[] = await this.httpGet('/debug/execute?page=' + opt.page +'&pageSize=' + opt.limit + '&code=' + q);
       const messages = [];
       if (results.length === 0) {
         messages.push(this.prepareMessage(`${results.length} rows were affected.`));
@@ -86,6 +89,7 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
       cols: results && results.length ? Object.keys(results[0]) : [],
       messages,
       query: this.queries.describeTable.raw,
+      queryType: 'describeTable',
       results,
     });
     return resultsAgg;
@@ -96,7 +100,7 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
     const params = { ...opt, limit, table, offset: page * limit };
     try {
       if (typeof this.queries.fetchRecords === 'function' && typeof this.queries.countRecords === 'function') {
-        let records;
+        let records, totalResult;
         switch (table.detail) {
           case 'String':
             [ records ] = await (Promise.all([
@@ -105,15 +109,16 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
             records.baseQuery = this.queries.fetchString.raw;
             break;
           default:
-            [ records ] = await (Promise.all([
+            [ records, totalResult ] = await (Promise.all([
               this.singleQuery(this.queries.fetchRecords(params), opt),
+              this.singleQuery(this.queries.countRecords(params), opt),
             ]));
             records.baseQuery = this.queries.fetchRecords.raw;
             break;
         }
-        records.pageSize = limit;
-        records.page = page != undefined ? page : 1;
-        records.total = Number(records.results.length);
+        records.pageSize = serverConfig.previewLimit;
+        records.page = page != undefined ? page : 0;
+        records.total = totalResult.results[0] != undefined ? Number((totalResult.results[0] as any).total) : records.results.length;
         records.queryType = 'showRecords';
         records.queryParams = table;
         return [records];
@@ -251,6 +256,7 @@ export interface ServerConfig {
   scheme?: string;
   path?: string;
   connectionTimeoutMillis?: number;
+  previewLimit?: number;
 }
 
 export interface MTClient {}
@@ -259,4 +265,5 @@ export interface ConnectionOptions {
   url?: string;
   database?: string;
   connectionTimeoutMillis?: number;
+  previewLimit?: number;
 }
