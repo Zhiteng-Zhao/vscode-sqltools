@@ -34,7 +34,8 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
     const queries = queryParse(query.toString()).filter(Boolean);
     let resultsAgg: NSDatabase.IResult[] = [];
     for (let q of queries) {
-      const results: any[] = await this.httpGet('/debug/execute?page=' + opt.page +'&pageSize=' + opt.limit + '&code=' + q);
+      let result = await this.httpGet('/debug/execute?page=' + opt.page +'&pageSize=' + opt.limit + '&code=' + q);
+      const results: any[] = result.results;
       const messages = [];
       if (results.length === 0) {
         messages.push(this.prepareMessage(`${results.length} rows were affected.`));
@@ -46,6 +47,13 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
         cols: results && results.length ? Object.keys(results[0]) : [],
         messages,
         query: q,
+        total: result.total,
+        pageSize: opt.limit,
+        page: opt.page,
+        queryType: 'showRecords',
+        queryParams: {
+          query: q
+        },
         results,
       });
     }
@@ -77,7 +85,7 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
   public async describeTable(metadata: NSDatabase.ITable, opt: IQueryOptions) {
     const { requestId } = opt;
     let resultsAgg: NSDatabase.IResult[] = [];
-    const results: any[] = await await this.httpGet('/debug/getMember?cacheName=' + metadata.schema + '&key=' + metadata.label);
+    const results: any[] = await this.httpGet('/debug/getMember?cacheName=' + metadata.schema + '&key=' + metadata.label);
     const messages = [];
     if (results.length === 0) {
       messages.push(this.prepareMessage(`${results.length} definition was found.`));
@@ -95,32 +103,33 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
     return resultsAgg;
   }
 
-  public async showRecords(table: NSDatabase.ITable, opt: IQueryOptions & { limit: number, page?: number }) {
+  public async showRecords(table: NSDatabase.ITable & { query: string} , opt: IQueryOptions & { limit: number, page?: number }) {
     const { limit, page = 0 } = opt;
     const params = { ...opt, limit, table, offset: page * limit };
     try {
       if (typeof this.queries.fetchRecords === 'function' && typeof this.queries.countRecords === 'function') {
-        let records, totalResult;
-        switch (table.detail) {
-          case 'String':
-            [ records ] = await (Promise.all([
-              this.singleQuery(this.queries.fetchString(params), opt),
-            ]));
-            records.baseQuery = this.queries.fetchString.raw;
-            break;
-          default:
-            [ records, totalResult ] = await (Promise.all([
-              this.singleQuery(this.queries.fetchRecords(params), opt),
-              this.singleQuery(this.queries.countRecords(params), opt),
-            ]));
-            records.baseQuery = this.queries.fetchRecords.raw;
-            break;
+        let records;
+        if (params.table.query != undefined) {
+          [ records ] = await (Promise.all([
+            this.singleQuery(params.table.query, opt),
+          ]));
+          records.baseQuery = params.table.query;
+        } else {
+          switch (table.detail) {
+            case 'String':
+              [ records ] = await (Promise.all([
+                this.singleQuery(this.queries.fetchString(params), opt),
+              ]));
+              records.baseQuery = this.queries.fetchString.raw;
+              break;
+            default:
+              [ records ] = await (Promise.all([
+                this.singleQuery(this.queries.fetchRecords(params), opt),
+              ]));
+              records.baseQuery = this.queries.fetchRecords.raw;
+              break;
+          }
         }
-        records.pageSize = serverConfig.previewLimit;
-        records.page = page != undefined ? page : 0;
-        records.total = totalResult.results[0] != undefined ? Number((totalResult.results[0] as any).total) : records.results.length;
-        records.queryType = 'showRecords';
-        records.queryParams = table;
         return [records];
       }
     } catch (error) {
