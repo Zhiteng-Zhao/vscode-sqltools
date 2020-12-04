@@ -15,7 +15,6 @@
     "outDir": "out",
     "baseUrl": ".",
     "paths": {
-      "pg-native": ["./node_modules/pg/lib/native", "../../node_modules/pg/lib/native"]
     }
   },
   "include": [

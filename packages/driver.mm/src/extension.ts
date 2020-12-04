@@ -19,7 +19,6 @@ export async function activate(extContext: ExtensionContext): Promise<IDriverExt
     type: 'driver',
     async register(extension) {
       // register ext part here
-      // postgres
       extension.resourcesMap().set(`driver/${DRIVER_ALIASES[0].value}/icons`, {
         active: extContext.asAbsolutePath('icons/mm/active.png'),
         default: extContext.asAbsolutePath('icons/mm/default.png'),
