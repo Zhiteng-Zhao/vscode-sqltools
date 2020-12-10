@@ -2,6 +2,7 @@ import * as React from 'react';
 import Paper from '@material-ui/core/Paper';
 import {
   SortingState,
+  EditingState,
   IntegratedSorting,
   FilteringState,
   IntegratedFiltering,
@@ -17,12 +18,20 @@ import {
   Grid,
   VirtualTable,
   TableHeaderRow,
+  TableEditRow, 
+  TableEditColumn,
   TableFilterRow,
   Table as MTable,
   TableColumnResizing,
   PagingPanel,
   TableSelection,
 } from '@devexpress/dx-react-grid-material-ui';
+
+import IconButton from '@material-ui/core/IconButton';
+import EditIcon from '@material-ui/icons/Edit';
+import SaveIcon from '@material-ui/icons/Save';
+import CancelIcon from '@material-ui/icons/Cancel';
+
 import { toRegEx } from '@sqltools/plugins/connection-manager/ui/lib/utils';
 import { TableProps } from '../../interfaces';
 import { availableFilterOperations, MenuActions } from '../../constants';
@@ -43,6 +52,43 @@ import { filterPredicate } from '../../utils/filterPredicate';
 import Message from '../../../../components/Message';
 import SortLabel from './SortLabel';
 import style from '../../../../sass/generic.m.scss';
+
+const EditButton = ({ onExecute }) => (
+  <IconButton onClick={onExecute} title="Edit row">
+    <EditIcon />
+  </IconButton>
+);
+
+const CommitButton = ({ onExecute }) => (
+  <IconButton onClick={onExecute} title="Save changes">
+    <SaveIcon />
+  </IconButton>
+);
+
+const CancelButton = ({ onExecute }) => (
+  <IconButton color="secondary" onClick={onExecute} title="Cancel changes">
+    <CancelIcon />
+  </IconButton>
+);
+
+const commandComponents = {
+  edit: EditButton,
+  commit: CommitButton,
+  cancel: CancelButton,
+};
+
+const Command = ({ id, onExecute }) => {
+  const CommandButton = commandComponents[id];
+  return (
+    <CommandButton
+      onExecute={onExecute}
+    />
+  );
+};
+
+const EditCell = (props) => {
+  return <TableEditRow.Cell {...props} />;
+};
 
 export default class Table extends React.PureComponent<TableProps, TableState> {
   state = initialState;
@@ -230,6 +276,35 @@ export default class Table extends React.PureComponent<TableProps, TableState> {
         defaultCurrentPage: 0
       };
     }
+
+    const commitChanges = ({ changed }) => {
+      let intsertText = this.props.query;
+      if (intsertText.endsWith('.list()') || intsertText.endsWith('.list();')) {
+        intsertText = this.props.query.substr(0, this.props.query.lastIndexOf('.'));
+      }
+      intsertText = intsertText.concat('.update(');
+      if (changed) {
+        let data = Object.keys(changed);
+        data.map(idx => {
+          let val = changed[idx];
+          let keys = Object.keys(val);
+          keys.forEach((key, index) => {
+            if (keys.length == index + 1) {
+              intsertText = intsertText.concat('val("').concat(key).concat('", "').concat(val[key]).concat('")');
+            } else {
+              intsertText = intsertText.concat('val("').concat(key).concat('", "').concat(val[key]).concat('"), ');
+            }
+          });
+          let index : number = this.props.page * this.props.pageSize + Number(idx);
+          intsertText = intsertText.concat(').idx("').concat(String(index)).concat('")');
+        });
+        sendMessage(UIAction.CALL, {
+          command: `${process.env.EXT_NAMESPACE}.insertText`,
+          args: [intsertText],
+        });
+      }
+    };
+
     return (
       <Paper square elevation={0} className="result">
         {error ? (
@@ -258,6 +333,17 @@ export default class Table extends React.PureComponent<TableProps, TableState> {
               <VirtualTable cellComponent={TableCell(this.openContextMenu)} />
               <TableColumnResizing columnWidths={columnExtensions} onColumnWidthsChange={this.updateWidths} />
               <TableHeaderRow showSortingControls sortLabelComponent={SortLabel}/>
+              <EditingState
+                onCommitChanges={commitChanges}
+              />
+              <TableEditRow
+                cellComponent={EditCell}
+              />
+              <TableEditColumn
+                width={100}
+                showEditCommand
+                commandComponent={Command}
+              />
               <TableSelection
                 selectByRowClick
                 highlightRow
