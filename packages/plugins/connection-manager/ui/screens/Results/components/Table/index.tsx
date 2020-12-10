@@ -299,6 +299,7 @@ export default class Table extends React.PureComponent<TableProps, TableState> {
           intsertText = intsertText.concat(').idx("').concat(String(index)).concat('")');
         });
         sendMessage(UIAction.CALL, {
+          // executeQuery
           command: `${process.env.EXT_NAMESPACE}.insertText`,
           args: [intsertText],
         });

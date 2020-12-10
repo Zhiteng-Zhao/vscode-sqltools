@@ -46,6 +46,7 @@
   "devDependencies": {
     "@types/source-map-support": "^0.5.0",
     "cross-env": "^7.0.2",
+    "express": "^4.17.1",
     "jest": "^24.5.0",
     "jest-cli": "^24.5.0",
     "jest-environment-node": "^24.5.0",
@@ -54,5 +55,6 @@
     "source-map-support": "^0.5.11",
     "typescript": "^3.7.3",
     "vsce": "1.76.0"
-  }
+  },
+  "dependencies": {}
 }
