@@ -36,11 +36,12 @@ const keywordsArr = [
   'desc()',
   'list()',
   'count()',
-  'one()',
-  'update()',
   'innerJoin()',
   'outerJoin()',
   'on()',
+  'update()',
+  'val()',
+  'idx()',
 ];
 
 const keywordsCompletion: { [w: string]: NSDatabase.IStaticCompletion } = keywordsArr.reduce((agg, word) => {
