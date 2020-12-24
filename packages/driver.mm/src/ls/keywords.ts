@@ -42,6 +42,7 @@ const keywordsArr = [
   'update()',
   'val()',
   'idx()',
+  'class()',
 ];
 
 const keywordsCompletion: { [w: string]: NSDatabase.IStaticCompletion } = keywordsArr.reduce((agg, word) => {
