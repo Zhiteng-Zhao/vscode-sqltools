@@ -108,4 +108,4 @@ This package is part of [vscode-sqltools](https://vscode-sqltools.mteixeira.dev/
     ).class("para.product.FtrContract").where(eq("varietyId", "m")).list();
     ```
 
-    > `.class()` [Optional] is the package for result class, that could be defined without `com.dce.common.model` or use default value `RowX` when it is missing
+    > `.class()` [Optional] is the package of result class, that could be defined without `com.dce.common.model` or use default value `RowX` when it is missing
