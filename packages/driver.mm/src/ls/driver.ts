@@ -60,6 +60,35 @@ export default class MM extends AbstractDriver<MTClient, ServerConfig> implement
     return resultsAgg;
   }
 
+  public queryAll: (typeof AbstractDriver)['prototype']['query'] = async (query, opt = {}) => {
+    const { requestId } = opt;
+    const queries = queryParse(query.toString()).filter(Boolean);
+    let resultsAgg: NSDatabase.IResult[] = [];
+    for (let q of queries) {
+      let result = await this.httpGet('/debug/download?code=' + q);
+      const results: any[] = result.results;
+      const messages = [];
+      if (results.length === 0) {
+        messages.push(this.prepareMessage(`${results.length} rows were affected.`));
+      }
+      resultsAgg.push(<NSDatabase.IResult>{
+        requestId,
+        resultId: generateId(),
+        connId: this.getId(),
+        cols: results && results.length ? Object.keys(results[0]) : [],
+        messages,
+        query: q,
+        total: result.total,
+        queryType: 'showRecords',
+        queryParams: {
+          query: q
+        },
+        results,
+      });
+    }
+    return resultsAgg;
+  }
+
   private async getColumns(parent: NSDatabase.ITable): Promise<NSDatabase.IColumn[]> {
     const columnsCaches = await this.httpGet('/debug/getMember?cacheName=' + parent.schema + '&key=' + parent.label);
     let columnResults: NSDatabase.IColumn[] = [];

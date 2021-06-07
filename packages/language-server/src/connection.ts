@@ -114,6 +114,35 @@ export default class Connection {
         } ];
       });
   }
+
+  public queryAll(query: string, opt: IQueryOptions & { throwIfError?: boolean } = {}): Promise<NSDatabase.IResult[]> {
+    return this.conn.queryAll(query, opt)
+      .catch(this.decorateException)
+      .catch((e) => {
+        log.error('%O', e);
+        if (opt.throwIfError) throw e;
+        telemetry.registerException(e, { driver: this.conn.credentials.driver });
+        let message = '';
+        if (typeof e === 'string') {
+          message = e;
+        } else if (e.message) {
+          message = e.message;
+        } else {
+          message = JSON.stringify(e);
+        }
+        return [{
+          requestId: opt.requestId,
+          resultId: generateId(),
+          connId: this.getId(),
+          cols: [],
+          error: true,
+          messages: [ { message, date: new Date() } ],
+          query,
+          results: [],
+        } ];
+      });
+  }
+
   public getName() {
     return this.conn.credentials.name;
   }

@@ -61,6 +61,13 @@ export const SaveResultsRequest = new RequestType<
   void
 >('connection/SaveResultsRequest');
 
+export const SaveAllResultsRequest = new RequestType<
+  IQueryOptions & { conn: IConnection, filename: string, fileType: 'json' | 'csv' },
+  void,
+  Error,
+  void
+>('connection/SaveAllResultsRequest');
+
 export const GetChildrenForTreeItemRequest = new RequestType<
   { conn: IConnection, item: MConnectionExplorer.IChildItem, parent?: MConnectionExplorer.IChildItem },
   MConnectionExplorer.IChildItem[],

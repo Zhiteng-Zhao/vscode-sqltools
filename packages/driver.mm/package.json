@@ -2,7 +2,7 @@
   "name": "sqltools-driver-mm",
   "displayName": "SQLTools Memory Clear MM Driver",
   "description": "A Visual Studio Code extension which extends SQLTools extension, with a driver to work with Memory Clear MM model",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "engines": {
     "vscode": "^1.42.0"
   },
@@ -57,8 +57,8 @@
     "compile:ls": "yarn run esbuild --bundle ./src/ls/plugin.ts --outfile=./out/ls/plugin.js --target=es2015 --define:process.env.PRODUCT=\"'ls'\"",
     "tsc-check": "yarn run ts --noEmit --preserveWatchOutput",
     "watch": "concurrently \"npm:watch:*\"",
-    "watch:ext": "yarn run compile:ext --define:process.env.NODE_ENV=\"'development'\" --sourcemap",
-    "watch:ls": "yarn run compile:ls --define:process.env.NODE_ENV=\"'development'\" --sourcemap",
+    "watch:ext": "yarn run compile:ext --define:process.env.NODE_ENV=\"'development'\" --sourcemap --trace-deprecation",
+    "watch:ls": "yarn run compile:ls --define:process.env.NODE_ENV=\"'development'\" --sourcemap --trace-deprecation",
     "dev:tsc": "yarn run tsc-check -w",
     "dev:fw": "chokidar \"src/**/*\" \"*.json\" --initial --silent -c \"yarn run watch\"",
     "ts": "tsc -p ."

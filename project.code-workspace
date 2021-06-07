@@ -46,6 +46,18 @@
       "**/dist": true
     },
     "typescript.tsdk": "root/node_modules/typescript/lib",
+    "sqltools.connections": [
+      {
+        "connectionMethod": "Server and Port",
+        "previewLimit": 50,
+        "scheme": "http",
+        "server": "localhost",
+        "port": 8080,
+        "path": "",
+        "driver": "MM",
+        "name": "test"
+      }
+    ],
   },
   "tasks": {
     "version": "2.0.0",

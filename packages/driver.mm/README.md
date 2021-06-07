@@ -109,3 +109,17 @@ This package is part of [vscode-sqltools](https://vscode-sqltools.mteixeira.dev/
     ```
 
     > `.class()` [Optional] is the package of result class, that could be defined without `com.dce.common.model` or use default value `RowX` when it is missing
+
+### 0.1.1
+
+- support distinct grammar 
+
+    ```java
+    TableBuilder.createTable(
+        dataManager.get("mt.default.cache", "ArbiContract0", Table.class)
+    ).where(
+        unieq("seriesId", "b2")
+    ).distinct("seriesId", "varietyId");
+    ```
+
+- add "Export All" button for grid to get the whole data 

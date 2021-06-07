@@ -38,6 +38,7 @@ const getCurrentQueryOptions = (activeResult: NSDatabase.IResult) => {
   return {
     requestId: activeResult.requestId,
     resultId: activeResult.resultId,
+    query: activeResult.query,
     baseQuery: activeResult.baseQuery,
     connId: activeResult.connId,
   };
@@ -76,6 +77,17 @@ const Screen: React.SFC<Props> = () => {
   const toggleTab = (value: number) => dispatch({ type: ACTION.TOGGLE_TAB, payload: value });
   const resultsReceived = (changes: Partial<QueryResultsState>) => dispatch({ type: ACTION.RESULTS_RECEIVED, payload: changes });
   const focusMessages = () => sendMessage(UIAction.CALL, { command: `${process.env.EXT_NAMESPACE}ViewConsoleMessages.focus` });
+  const exportAllResults = (choice?: MenuActions.SaveCSVOption | MenuActions.SaveJSONOption | any) => {
+    const activeResult = getCurrentResult(stateRef.current);
+    if (!activeResult) return;
+    sendMessage(UIAction.CALL, {
+      command: `${process.env.EXT_NAMESPACE}.saveAllResults`,
+      args: [{
+        ...getCurrentQueryOptions(activeResult),
+        fileType: Object.values(MenuActions).includes(choice) ? (choice === MenuActions.SaveJSONOption ? 'json' : 'csv') : undefined,
+      }],
+    });
+  };
   const exportResults = (choice?: MenuActions.SaveCSVOption | MenuActions.SaveJSONOption | any) => {
     const activeResult = getCurrentResult(stateRef.current);
     if (!activeResult) return;
@@ -216,6 +228,7 @@ const Screen: React.SFC<Props> = () => {
             <Button onClick={focusMessages} className='action-button'>Console</Button>
             <Button onClick={reRunQuery} className='action-button'>Re-Run Query</Button>
             <Button onClick={exportResults} className='action-button'>Export</Button>
+            <Button onClick={exportAllResults} className='action-button'>Export All</Button>
             <Button onClick={openResults} className='action-button'>Open</Button>
           </div>
         }

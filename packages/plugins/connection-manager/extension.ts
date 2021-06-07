@@ -20,7 +20,7 @@ import path from 'path';
 import { file } from 'tempy';
 import { CancellationTokenSource, commands, ConfigurationTarget, env as vscodeEnv, Progress, ProgressLocation, QuickPickItem, TextDocument, TextEditor, Uri, window, workspace } from 'vscode';
 import CodeLensPlugin from '../codelens/extension';
-import { ConnectRequest, DisconnectRequest, ForceListRefresh, GetChildrenForTreeItemRequest, GetConnectionPasswordRequest, GetConnectionsRequest, GetInsertQueryRequest, ProgressNotificationComplete, ProgressNotificationCompleteParams, ProgressNotificationStart, ProgressNotificationStartParams, RunCommandRequest, SaveResultsRequest, SearchConnectionItemsRequest, TestConnectionRequest } from './contracts';
+import { ConnectRequest, DisconnectRequest, ForceListRefresh, GetChildrenForTreeItemRequest, GetConnectionPasswordRequest, GetConnectionsRequest, GetInsertQueryRequest, ProgressNotificationComplete, ProgressNotificationCompleteParams, ProgressNotificationStart, ProgressNotificationStartParams, RunCommandRequest, SaveResultsRequest, SaveAllResultsRequest, SearchConnectionItemsRequest, TestConnectionRequest } from './contracts';
 import DependencyManager from './dependency-manager/extension';
 import { getExtension } from './extension-util';
 import statusBar from './status-bar';
@@ -291,6 +291,59 @@ export class ConnectionManagerPlugin implements IExtensionPlugin {
   }
 
   private ext_showOutputChannel = async () => logger.show();
+
+  private ext_saveAllResults = async (arg: (IQueryOptions & { fileType?: 'csv' | 'json' | 'prompt' }) | Uri = {}) => {
+    let fileType: string | null = null;
+    let opt: IQueryOptions = {};
+    if (arg instanceof Uri) {
+      // if clicked on editor title actions
+      const view = this.resultsWebview.getActiveView();
+      if (!view) {
+        throw 'Can\'t find active results view';
+      }
+      const state = await view.getState();
+      const activeResult = state.resultTabs[state.activeTab];
+      opt = {
+        requestId: activeResult.requestId,
+        resultId: activeResult.resultId,
+        baseQuery: activeResult.baseQuery,
+        connId: activeResult.connId,
+      }
+    } else if (arg.requestId) {
+      // used context menu inside of a view
+      const { fileType: optFileType, ...rest } = arg;
+      fileType = optFileType;
+      opt = rest;
+    }
+
+    if (!opt || !opt.requestId) throw 'Can\'t find active results view';
+
+    fileType = fileType || Config.defaultExportType;
+    if (fileType === 'prompt') {
+      fileType = await quickPick<'csv' | 'json' | undefined>([
+        { label: 'Save all results as CSV', value: 'csv' },
+        { label: 'Save all results as JSON', value: 'json' },
+      ], 'value', {
+        title: 'Select a file type to export',
+      });
+    }
+
+    if (!fileType || fileType === 'prompt') return;
+
+    const filters = fileType === 'csv' ? { 'CSV File': ['csv', 'txt'] } : { 'JSON File': ['json'] };
+    const file = await window.showSaveDialog({
+      filters,
+      saveLabel: 'Export'
+    });
+    if (!file) return;
+    const filename = file.fsPath;
+    const conn = await this.explorer.getActive() || await this._pickConnection(true);
+    if (!conn) {
+      return;
+    }
+    await this.client.sendRequest(SaveAllResultsRequest, { ...opt, conn, filename, fileType });
+    return commands.executeCommand('vscode.open', file);
+  }
 
   private ext_saveResults = async (arg: (IQueryOptions & { fileType?: 'csv' | 'json' | 'prompt' }) | Uri = {}) => {
     let fileType: string | null = null;
@@ -742,6 +795,7 @@ export class ConnectionManagerPlugin implements IExtensionPlugin {
       .registerCommand(`executeQueryFromFile`, this.ext_executeQueryFromFile)
       .registerCommand(`refreshTree`, this.ext_refreshTree)
       .registerCommand(`saveResults`, this.ext_saveResults)
+      .registerCommand(`saveAllResults`, this.ext_saveAllResults)
       .registerCommand(`openResults`, this.ext_openResults)
       .registerCommand(`selectConnection`, this.ext_selectConnection)
       .registerCommand(`showOutputChannel`, this.ext_showOutputChannel)

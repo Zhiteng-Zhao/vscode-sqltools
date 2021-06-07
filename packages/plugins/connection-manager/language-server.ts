@@ -5,7 +5,7 @@ import { getConnectionId, migrateConnectionSetting } from '@sqltools/util/connec
 import csvStringify from 'csv-stringify/lib/sync';
 import { writeFile as writeFileWithCb } from 'fs';
 import { promisify } from 'util';
-import { ConnectRequest, DisconnectRequest, SearchConnectionItemsRequest, GetConnectionPasswordRequest, GetConnectionsRequest, RunCommandRequest, SaveResultsRequest, ProgressNotificationStart, ProgressNotificationComplete, TestConnectionRequest, GetChildrenForTreeItemRequest, ForceListRefresh, GetInsertQueryRequest } from './contracts';
+import { ConnectRequest, DisconnectRequest, SearchConnectionItemsRequest, GetConnectionPasswordRequest, GetConnectionsRequest, RunCommandRequest, SaveResultsRequest, SaveAllResultsRequest, ProgressNotificationStart, ProgressNotificationComplete, TestConnectionRequest, GetChildrenForTreeItemRequest, ForceListRefresh, GetInsertQueryRequest } from './contracts';
 import Handlers from './cache/handlers';
 import DependencyManager from './dependency-manager/language-server';
 import { DependeciesAreBeingInstalledNotification } from './dependency-manager/contracts';
@@ -52,6 +52,30 @@ export default class ConnectionManagerPlugin implements ILanguageServerPlugin {
     } catch (e) {
       this.server.notifyError('Execute query error', e);
       throw e;
+    }
+  };
+
+  private saveAllResultsHandler: RequestHandler<typeof SaveAllResultsRequest> = async ({ conn, fileType, filename, ...opts}) => {
+    // const { results, cols } = await queryResultsCache.get(queryResultsCache.buildKey(opts));
+    // log.error(results);
+    // log.error(cols);
+    const c = await this.getConnectionInstance(conn);
+    if (!c) throw 'Connection not found';
+    const queryAllResult = await Promise.resolve(c.queryAll(opts.query, opts));
+    //log.error(queryAllResult);
+    if (fileType === 'json') {
+      return writeFile(filename, JSON.stringify(queryAllResult[0].results, null, 2));
+    }
+    if (fileType === 'csv') {
+      return writeFile(
+        filename,
+        csvStringify(queryAllResult[0].results, {
+          columns: queryAllResult[0].cols,
+          header: true,
+          quoted_string: true,
+          quoted_empty: true,
+        }),
+      );
     }
   };
 
@@ -263,6 +287,7 @@ export default class ConnectionManagerPlugin implements ILanguageServerPlugin {
 
     this.server.onRequest(RunCommandRequest, this.runCommandHandler);
     this.server.onRequest(SaveResultsRequest, this.saveResultsHandler);
+    this.server.onRequest(SaveAllResultsRequest, this.saveAllResultsHandler);
     this.server.onRequest(SearchConnectionItemsRequest, this.searchItemsHandler);
     this.server.onRequest(DisconnectRequest, this.closeConnectionHandler);
     this.server.onRequest(GetConnectionPasswordRequest, this.GetConnectionPasswordRequestHandler);

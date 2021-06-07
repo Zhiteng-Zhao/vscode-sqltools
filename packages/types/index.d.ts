@@ -227,6 +227,7 @@ export interface IConnectionDriver {
   describeTable(table: NSDatabase.ITable, opt?: IQueryOptions): Promise<NSDatabase.IResult[]>;
   showRecords(tableName: NSDatabase.ITable, opt: IQueryOptions & { limit: number, page?: number }): Promise<NSDatabase.IResult[]>;
   query(query: string, opt?: IQueryOptions): Promise<NSDatabase.IResult[]>;
+  queryAll(query: string, opt?: IQueryOptions): Promise<NSDatabase.IResult[]>;
   testConnection?(): Promise<void>;
   getChildrenForItem?(params: { item: NSDatabase.SearchableItem, parent?: NSDatabase.SearchableItem }): Promise<MConnectionExplorer.IChildItem[]>;
   searchItems?(itemType: ContextValue, search: string, extraParams: any): Promise<NSDatabase.SearchableItem[]>;
