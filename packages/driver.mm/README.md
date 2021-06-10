@@ -8,6 +8,11 @@ This package is part of [vscode-sqltools](https://vscode-sqltools.mteixeira.dev/
 
 - First working version
 
+### 0.1.1
+
+- support distinct grammar 
+- add "Export All" button for grid to get the whole data 
+
 ## Guides
 
 > `"mt.defalt.cache"` could be replaced with constant `DATA_CACHE`
@@ -110,16 +115,12 @@ This package is part of [vscode-sqltools](https://vscode-sqltools.mteixeira.dev/
 
     > `.class()` [Optional] is the package of result class, that could be defined without `com.dce.common.model` or use default value `RowX` when it is missing
 
-### 0.1.1
-
-- support distinct grammar 
+- distinct grammar
 
     ```java
     TableBuilder.createTable(
         dataManager.get("mt.default.cache", "ArbiContract0", Table.class)
     ).where(
-        unieq("seriesId", "b2")
+        eq("seriesId", "b2")
     ).distinct("seriesId", "varietyId");
     ```
-
-- add "Export All" button for grid to get the whole data 
